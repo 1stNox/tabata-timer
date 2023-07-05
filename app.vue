@@ -1,6 +1,7 @@
 <template>
   <div class="w-screen h-screen flex justify-center items-center">
     <div class="flex flex-col justify-center items-center gap-3">
+      <h2 class="text-2xl font-light">Round: {{ rounds }} Exercise: {{ exercise }}</h2>
       <h1 ref="clock" class="text-8xl font-medium">{{ seconds }}</h1>
       <div class="flex justify-center items-center gap-3">
         <button
@@ -11,8 +12,9 @@
           Start
         </button>
         <button
-          class="w-32 h-10 flex justify-center items-center gap-1 rounded-lg text-xl font-medium bg-gray-300"
+          class="w-32 h-10 flex justify-center items-center gap-1 rounded-lg text-xl font-medium disabled:text-gray-400 bg-gray-300"
           @click="openSettings"
+          :disabled="isStarted"
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -37,6 +39,10 @@
           Settings
         </button>
       </div>
+
+      <audio ref="music"><source type="audio/mpeg" src="./assets/beep.mp3"></audio>
+      <audio ref="music2"><source type="audio/mpeg" src="./assets/beep2.mp3"></audio>
+      <audio ref="music3"><source type="audio/mpeg" src="./assets/beep3.mp3"></audio>
     </div>
     <TransitionRoot appear :show="areSettingsOpen" as="template">
       <Dialog as="div" @close="closeSettings" class="relative z-10">
@@ -72,22 +78,41 @@
                   as="h3"
                   class="text-lg font-medium leading-6 text-gray-900"
                 >
-                  Payment successful
+                  Settings
                 </DialogTitle>
                 <div class="mt-2">
-                  <p class="text-sm text-gray-500">
-                    Your payment has been successfully submitted. We’ve sent you
-                    an email with all of the details of your order.
-                  </p>
+                  <div class="flex justify-start items-center gap-2 py-2">
+                    <p class="w-16">Seconds:</p>
+                    <input v-model="secondsForm" type="text" class="px-2 bg-gray-100 rounded-md border border-transparent text-gray-900 hover:bg-gray-200 active:bg-gray-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-500 focus-visible:ring-offset-2" />
+                  </div>
+                  <div class="flex justify-start items-center gap-2 py-2">
+                    <p class="w-16">Rest:</p>
+                    <input v-model="restForm" type="text" class="px-2 bg-gray-100 rounded-md border border-transparent text-gray-900 hover:bg-gray-200 active:bg-gray-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-500 focus-visible:ring-offset-2" />
+                  </div>
+                  <div class="flex justify-start items-center gap-2 py-2">
+                    <p class="w-16">Rounds:</p>
+                    <input v-model="roundsForm" type="text" class="px-2 bg-gray-100 rounded-md border border-transparent text-gray-900 hover:bg-gray-200 active:bg-gray-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-500 focus-visible:ring-offset-2" />
+                  </div>
+                  <div class="flex justify-start items-center gap-2 py-2">
+                    <p class="w-16">Exercises:</p>
+                    <input v-model="exerciseForm" type="text" class="px-2 bg-gray-100 rounded-md border border-transparent text-gray-900 hover:bg-gray-200 active:bg-gray-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-500 focus-visible:ring-offset-2" />
+                  </div>
                 </div>
 
-                <div class="mt-4">
+                <div class="mt-4 flex justify-start items-center gap-3">
                   <button
                     type="button"
-                    class="inline-flex justify-center rounded-md border border-transparent bg-blue-100 px-4 py-2 text-sm font-medium text-blue-900 hover:bg-blue-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+                    class="inline-flex justify-center rounded-md border border-transparent bg-gray-100 px-4 py-2 text-sm font-medium text-gray-900 hover:bg-gray-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-500 focus-visible:ring-offset-2"
                     @click="closeSettings"
                   >
-                    Got it, thanks!
+                    Cancel
+                  </button>
+                  <button 
+                    type="button" 
+                    class="inline-flex justify-center rounded-md border border-transparent bg-blue-100 px-4 py-2 text-sm font-medium text-blue-900 hover:bg-blue-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+                    @click="saveSettings"
+                  >
+                    Save
                   </button>
                 </div>
               </DialogPanel>
@@ -111,9 +136,22 @@ import {
 const areSettingsOpen = ref(false);
 const clock = ref(null);
 const control = ref(null);
+const exercise = ref(0);
+const exerciseForm = ref("");
+const isStarted = ref(false);
+const music = ref(null);
+const music2 = ref(null);
+const music3 = ref(null);
+const restForm = ref("");
+const rounds = ref(1)
+const roundsForm = ref("");
 const seconds = ref(40);
+const secondsForm = ref("");
 
-let isStarted = false;
+let desiredExercises = 4;
+let desiredRest = 20;
+let desiredRounds = 5;
+let desiredSeconds = 40;
 let timer = null;
 
 function closeSettings() {
@@ -121,10 +159,11 @@ function closeSettings() {
 }
 
 function handleControl() {
-  if (isStarted) stop();
-  else start();
-
-  isStarted = !isStarted;
+  if (isStarted.value) stop();
+  else {
+    isStarted.value = true;
+    start();
+  }
 }
 
 function openSettings() {
@@ -132,35 +171,66 @@ function openSettings() {
 }
 
 function rest() {
-  seconds.value = 20;
-  if (!clock.value.classList.contains("text-green-500"))
-    clock.value.classList.add("text-green-500");
+  seconds.value = desiredRest;
+  if (!clock.value.classList?.contains("text-green-500"))
+    clock.value.classList?.add("text-green-500");
 
   timer = setInterval(() => {
     if (seconds.value === 0) {
-      clock.value.classList.remove("text-green-500");
+      clock.value.classList?.remove("text-green-500");
       clearInterval(timer);
       timer = null;
+
+      if (rounds.value < desiredRounds)
+        start();
+      else 
+        stop();
     } else {
       seconds.value -= 1;
     }
   }, 1000);
 }
 
+function saveSettings() {
+  desiredSeconds = parseInt(secondsForm.value);
+  desiredRest = parseInt(restForm.value);
+  desiredRounds = parseInt(roundsForm.value);
+  desiredExercises = parseInt(exerciseForm.value);
+
+  seconds.value = desiredSeconds;
+
+  closeSettings();
+}
+
 function start() {
-  control.value.classList.remove("bg-green-500");
-  control.value.classList.add("bg-red-500");
+  control.value.classList?.remove("bg-green-500");
+  control.value.classList?.add("bg-red-500");
   control.value.innerHTML = "Stop";
+
+  if (exercise.value === desiredExercises) {
+    rounds.value += 1;
+    exercise.value = 1;
+  } else
+    exercise.value += 1;
+  
+  seconds.value = desiredSeconds;
+
+  music3.value.play();
 
   timer = setInterval(() => {
     if (seconds.value === 0) {
-      clock.value.classList.remove("text-red-500");
+      clock.value.classList?.remove("text-red-500");
       clearInterval(timer);
       timer = null;
+
+      music2.value.play();
       rest();
     } else {
-      if (seconds.value < 11 && !clock.value.classList.contains("text-red-500"))
-        clock.value.classList.add("text-red-500");
+      if (seconds.value <= 11 && !clock.value.classList?.contains("text-red-500")) {
+        clock.value.classList?.add("text-red-500");
+        music.value.play();
+      }
+
       seconds.value -= 1;
     }
   }, 1000);
@@ -170,18 +240,20 @@ function stop() {
   clearInterval(timer);
   timer = null;
 
-  control.value.classList.remove("bg-red-500");
-  control.value.classList.add("bg-green-500");
+  control.value.classList?.remove("bg-red-500");
+  control.value.classList?.add("bg-green-500");
   control.value.innerHTML = "Start";
 
-  if (clock.value.classList.contains("text-red-500"))
-    clock.value.classList.remove("text-red-500");
+  if (clock.value.classList?.contains("text-red-500"))
+    clock.value.classList?.remove("text-red-500");
 
-  if (clock.value.classList.contains("text-green-500"))
-    clock.value.classList.remove("text-green-500");
+  if (clock.value.classList?.contains("text-green-500"))
+    clock.value.classList?.remove("text-green-500");
 
-  seconds.value = 40;
+  isStarted.value = false;
+
+  seconds.value = desiredSeconds;
+  rounds.value = 1;
+  exercise.value = 0;
 }
-
-function saveSettings() {}
 </script>
