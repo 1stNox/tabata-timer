@@ -13,7 +13,7 @@
     "@nuxt/devtools": "latest",
     "@nuxtjs/tailwindcss": "^6.8.0",
     "@types/node": "^18",
-    "nuxt": "^3.9.3",
+    "nuxt": "^3.10.1",
     "nuxt-headlessui": "^1.1.4"
   }
 }
